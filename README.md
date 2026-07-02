@@ -20,7 +20,7 @@ $$Y = XB + U$$
 donde $Y \in \mathbb{R}^{n \times 4}$ recoge cuatro variables respuesta de rezago social (limitación cognitiva, analfabetismo, desocupación, carencia de bienes en la vivienda) y $X \in \mathbb{R}^{n \times 11}$ agrupa el intercepto y diez covariables sociodemográficas. La implementación cubre:
 
 - Estimación por MCO multivariado con verificación numérica de la descomposición $T = H + E$
-- Pruebas globales de hipótesis (Wilks, Pillai, Hotelling–Lawley, Roy) con aproximación a la distribución $F$
+- Pruebas globales con aproximaciones $F$ para Wilks, Pillai y Hotelling–Lawley; Roy se conserva como descriptor con cota superior de referencia cuando $s>1$
 - Pruebas parciales tipo III por covariable
 - Diagnóstico residual: normalidad multivariada de Mardia, heterocedasticidad tipo White multivariada, observaciones influyentes (leverage, distancia de Cook)
 - Análisis de sensibilidad por exclusión de municipios influyentes
