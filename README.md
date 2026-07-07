@@ -57,6 +57,10 @@ Las propuestas que cambien variables, filtros, transformaciones, supuestos o pro
 
 La separación funcional se explica en [docs/ARQUITECTURA_DEL_REPOSITORIO.md](docs/ARQUITECTURA_DEL_REPOSITORIO.md).
 
+## Material complementario
+
+- [Presentación de defensa](presentacion/defensa_tesis.pdf)
+
 ## Requisitos
 
 - Python 3.9 o superior. La implementación usa características del lenguaje disponibles desde Python 3.9 y las versiones mínimas declaradas en `requirements.txt`.
