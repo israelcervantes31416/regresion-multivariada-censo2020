@@ -27,7 +27,7 @@ No mezcle cambios metodológicos y documentales en una misma propuesta cuando pu
    python -m pip install -r requirements.txt
    ```
 
-4. Descargue los datos oficiales o valide una copia local:
+4. Descargue la estructura oficial o valide la fuente canónica local:
 
    ```bash
    python scripts/descargar_iter2020.py
@@ -41,7 +41,7 @@ No mezcle cambios metodológicos y documentales en una misma propuesta cuando pu
 
 ## Reglas obligatorias
 
-- No suba `datos.csv`, ZIPs, descargas parciales, cachés, salidas pesadas ni archivos temporales.
+- No suba `iter_00_cpv2020_csv/`, `datos.csv`, ZIPs, descargas parciales, cachés, salidas pesadas ni archivos temporales.
 - No sustituya la fuente oficial de INEGI por fuentes de terceros.
 - No cambie nombres de variables censales sin documentar la correspondencia con la fuente.
 - No añada dependencias sin explicar su necesidad, versión mínima e impacto.
@@ -51,7 +51,7 @@ No mezcle cambios metodológicos y documentales en una misma propuesta cuando pu
 
 ## Validación mínima
 
-Con un `datos.csv` válido en la raíz, ejecute:
+Con el CSV canónico válido dentro de la estructura extraída, ejecute:
 
 ```bash
 python -m py_compile scripts/descargar_iter2020.py

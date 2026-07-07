@@ -10,22 +10,23 @@ Esta guía resume la organización funcional y documental del proyecto. Los proc
 - `CONTRIBUTING.md`: define el flujo y los criterios para proponer cambios.
 - `CHANGELOG.md`: registra cambios documentados sin inventar versiones o publicaciones.
 - `regresion_multivariada_censo2020.ipynb`: carga el ITER local, construye variables, estima el modelo, ejecuta diagnósticos y produce resultados y visualizaciones.
-- `scripts/descargar_iter2020.py`: descarga desde INEGI, valida el contenido, extrae el CSV nacional y lo instala de forma segura.
+- `scripts/descargar_iter2020.py`: descarga desde INEGI, valida el contenido, conserva la estructura original del ZIP e instala el árbol de forma segura.
 - `requirements.txt`: declara las dependencias mínimas de Python para el notebook.
 - `LICENSE`: aplica la licencia MIT al código y distingue los términos aplicables a los datos.
 - `docs/`: contiene las guías de arquitectura, reproducibilidad y pruebas.
 - `.github/pull_request_template.md`: normaliza la información mínima para revisar propuestas.
 - `.gitignore`: excluye datos, ZIPs, entornos, cachés y salidas locales.
-- `datos.csv`: copia local no versionada de la fuente oficial; no forma parte de la distribución del repositorio.
+- `iter_00_cpv2020_csv/`: estructura oficial extraída, local y no versionada; contiene el CSV canónico.
+- `datos.csv`: compatibilidad heredada opcional; no forma parte de la distribución ni se genera automáticamente.
 
 ## Flujo lógico
 
 ```text
-fuente oficial INEGI
+ZIP oficial de INEGI
         ↓
-script de descarga y validación
+script de descarga, extracción y validación
         ↓
-datos.csv local
+estructura original extraída localmente
         ↓
 notebook
         ↓
@@ -38,11 +39,11 @@ El notebook no descarga datos. El script no ejecuta el análisis. Esta separaci�
 
 ### Datos
 
-INEGI publica la fuente ITER 2020. `datos.csv` es una copia de trabajo local, ignorada por Git y sujeta a los términos del organismo.
+INEGI publica la fuente ITER 2020. El árbol `iter_00_cpv2020_csv/` conserva la estructura del proveedor, está ignorado por Git y contiene la fuente local canónica. `datos.csv` sólo se admite como fallback heredado.
 
 ### Adquisición
 
-`scripts/descargar_iter2020.py` concentra la URL oficial, descarga, validaciones estructurales, extracción segura, protección del destino y escritura atómica.
+`scripts/descargar_iter2020.py` concentra la URL oficial, descarga, validaciones estructurales, extracción segura del árbol completo, protección del destino y sustitución atómica.
 
 ### Análisis
 
@@ -59,7 +60,7 @@ El README orienta al usuario; `docs/` explica auditoría, pruebas y arquitectura
 ## Reglas de trazabilidad
 
 - No mezcle cambios metodológicos con cambios documentales si pueden revisarse por separado.
-- No suba `datos.csv`, ZIPs, copias ejecutadas del notebook ni salidas pesadas.
+- No suba `iter_00_cpv2020_csv/`, `datos.csv`, ZIPs, copias ejecutadas del notebook ni salidas pesadas.
 - Documente todo cambio que afecte variables, filtros, denominadores, transformaciones, inferencia o resultados.
 - Mantenga los resultados originales como referencia; presente alternativas como extensiones o análisis de sensibilidad.
 - Conserve el vínculo entre variables del notebook, columnas ITER y fuente oficial.

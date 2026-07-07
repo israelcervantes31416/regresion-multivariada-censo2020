@@ -8,6 +8,7 @@ import csv
 import hashlib
 import os
 import shutil
+import stat
 import sys
 import tempfile
 import urllib.error
@@ -30,7 +31,13 @@ OFFICIAL_URL = (
     "datosabiertos/iter/iter_00_cpv2020_csv.zip"
 )
 EXPECTED_CSV_BASENAME = "conjunto_de_datos_iter_00CSV20.csv"
-DEFAULT_DEST = Path(__file__).resolve().parent.parent / "datos.csv"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DEST = PROJECT_ROOT / "iter_00_cpv2020_csv"
+PROVIDER_ROOT = Path("iter_00_cpv2020")
+CANONICAL_CSV_RELATIVE = (
+    PROVIDER_ROOT / "conjunto_de_datos" / EXPECTED_CSV_BASENAME
+)
+LEGACY_DEST = PROJECT_ROOT / "datos.csv"
 
 GEOGRAPHIC_COLUMNS = {
     "ENTIDAD",
@@ -96,6 +103,18 @@ def sha256_file(path: Path) -> str:
 
 def normalized(value: str) -> str:
     return " ".join(value.strip().casefold().split())
+
+
+def canonical_csv_path(extraction_root: Path) -> Path:
+    return extraction_root / CANONICAL_CSV_RELATIVE
+
+
+def display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return str(resolved)
 
 
 def validate_initial_national_rows(
@@ -227,9 +246,17 @@ def ensure_safe_member_names(infos: Iterable[zipfile.ZipInfo]) -> None:
         has_drive = bool(path.parts and path.parts[0].endswith(":"))
         if path.is_absolute() or ".." in path.parts or has_drive:
             raise IterError(f"El ZIP contiene una ruta insegura: {info.filename!r}")
+        file_type = stat.S_IFMT(info.external_attr >> 16)
+        if file_type == stat.S_IFLNK:
+            raise IterError(f"El ZIP contiene un enlace simbólico: {info.filename!r}")
+        if path.parts and path.parts[0].casefold() != PROVIDER_ROOT.name.casefold():
+            raise IterError(
+                "El ZIP contiene una entrada fuera de la estructura oficial esperada: "
+                f"{info.filename!r}"
+            )
 
 
-def extract_expected_csv(zip_path: Path, destination: Path) -> None:
+def extract_official_tree(zip_path: Path, extraction_root: Path) -> Path:
     if not zipfile.is_zipfile(zip_path):
         raise IterError("La descarga anunciada como ZIP no es un ZIP legible.")
     try:
@@ -240,23 +267,66 @@ def extract_expected_csv(zip_path: Path, destination: Path) -> None:
             if damaged is not None:
                 raise IterError(f"El ZIP está dañado en la entrada: {damaged}")
 
-            matches = [
-                info
-                for info in infos
-                if not info.is_dir()
-                and PurePosixPath(info.filename.replace("\\", "/")).name.casefold()
-                == EXPECTED_CSV_BASENAME.casefold()
-            ]
+            expected = PurePosixPath(CANONICAL_CSV_RELATIVE.as_posix())
+            matches = []
+            for info in infos:
+                member = PurePosixPath(info.filename.replace("\\", "/"))
+                if not info.is_dir() and member.as_posix().casefold() == expected.as_posix().casefold():
+                    matches.append(info)
             if len(matches) != 1:
                 raise IterError(
-                    "El ZIP no contiene exactamente un CSV nacional esperado "
-                    f"({EXPECTED_CSV_BASENAME})."
+                    "El ZIP no contiene exactamente la ruta nacional esperada "
+                    f"({CANONICAL_CSV_RELATIVE.as_posix()})."
                 )
 
-            with archive.open(matches[0], "r") as source, destination.open("wb") as target:
-                shutil.copyfileobj(source, target, length=1024 * 1024)
+            extraction_root.mkdir(parents=True, exist_ok=False)
+            archive.extractall(extraction_root)
     except zipfile.BadZipFile as exc:
         raise IterError("El ZIP descargado no es legible.") from exc
+
+    candidate = canonical_csv_path(extraction_root)
+    if not candidate.is_file():
+        raise IterError("La extracción no produjo el CSV canónico esperado.")
+    return candidate
+
+
+def create_direct_csv_tree(source: Path, extraction_root: Path) -> Path:
+    candidate = canonical_csv_path(extraction_root)
+    candidate.parent.mkdir(parents=True, exist_ok=False)
+    shutil.copyfile(source, candidate)
+    return candidate
+
+
+def install_provider_tree(
+    extracted_root: Path, destination_root: Path, force: bool
+) -> None:
+    candidate_provider = extracted_root / PROVIDER_ROOT
+    target_provider = destination_root / PROVIDER_ROOT
+    if not candidate_provider.is_dir():
+        raise IterError("La descarga validada no contiene el árbol oficial esperado.")
+
+    destination_root.mkdir(parents=True, exist_ok=True)
+    if not target_provider.exists():
+        os.replace(candidate_provider, target_provider)
+        return
+    if not force:
+        raise IterError(
+            "La estructura local del proveedor ya existe pero no contiene un CSV "
+            "canónico válido. Revísela o use --force para reemplazarla de forma segura."
+        )
+
+    backup = destination_root / f".{PROVIDER_ROOT.name}.backup-{os.getpid()}"
+    if backup.exists():
+        raise IterError(f"No se puede crear el respaldo temporal: {backup}")
+
+    os.replace(target_provider, backup)
+    try:
+        os.replace(candidate_provider, target_provider)
+    except OSError:
+        os.replace(backup, target_provider)
+        raise
+    else:
+        shutil.rmtree(backup)
 
 
 def classify_download(path: Path, content_type: str) -> str:
@@ -320,7 +390,7 @@ def download_to_temp(url: str, destination: Path) -> tuple[str, int]:
 
 
 def print_report(report: ValidationReport) -> None:
-    print(f"Archivo validado: {report.path}")
+    print(f"Archivo validado: {display_path(report.path)}")
     print(f"Tamaño final: {report.size:,} bytes")
     print(f"SHA-256: {report.sha256}")
     print(f"Codificación: {report.encoding}; separador: {report.delimiter!r}")
@@ -339,19 +409,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="reemplaza el destino sólo después de validar una nueva descarga",
+        help="reemplaza el árbol extraído sólo después de validar una nueva descarga",
     )
     parser.add_argument(
         "--validate-only",
         action="store_true",
-        help="valida el archivo existente sin usar la red",
+        help="valida la fuente local existente sin usar la red",
     )
     parser.add_argument(
         "--dest",
         type=Path,
         default=DEFAULT_DEST,
-        metavar="RUTA",
-        help="ruta del CSV final (por defecto: datos.csv en la raíz del proyecto)",
+        metavar="DIRECTORIO",
+        help=(
+            "directorio raíz de extracción (por defecto: "
+            "iter_00_cpv2020_csv en la raíz del proyecto)"
+        ),
     )
     args = parser.parse_args()
     if args.force and args.validate_only:
@@ -360,40 +433,75 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
-    destination = args.dest.expanduser().resolve()
+    destination_root = args.dest.expanduser().resolve()
+    canonical = canonical_csv_path(destination_root)
+    using_default_destination = destination_root == DEFAULT_DEST.resolve()
     print(f"URL oficial configurada: {OFFICIAL_URL}")
+    print(f"Ruta canónica configurada: {display_path(canonical)}")
 
     if args.validate_only:
         print("Modo de sólo validación; no se usará la red.")
-        print_report(validate_csv(destination))
-        return
+        if canonical.is_file():
+            print("Validando la fuente canónica extraída de INEGI.")
+            print_report(validate_csv(canonical))
+            return
+        if using_default_destination and LEGACY_DEST.is_file():
+            print(
+                "Advertencia: no existe la ruta canónica; se validará datos.csv "
+                "únicamente como compatibilidad heredada."
+            )
+            print_report(validate_csv(LEGACY_DEST))
+            return
+        raise IterError(
+            "No existe el CSV canónico"
+            + (
+                " ni datos.csv de compatibilidad heredada."
+                if using_default_destination
+                else "."
+            )
+        )
 
-    if destination.exists() and not args.force:
+    if canonical.exists() and not args.force:
         try:
-            report = validate_csv(destination)
+            report = validate_csv(canonical)
         except IterError as exc:
             raise IterError(
-                f"El destino ya existe pero no pasó la validación: {exc} "
-                "Revíselo o use --force para reemplazarlo de forma segura."
+                f"La fuente canónica existe pero no pasó la validación: {exc} "
+                "Revísela o use --force para reemplazarla de forma segura."
             ) from exc
-        print("datos.csv ya existe y es válido; no se descargará de nuevo.")
+        print("La fuente oficial extraída ya está disponible; no se descargará de nuevo.")
         print_report(report)
         return
 
-    if destination.exists():
-        print("--force activo: el archivo actual sólo se reemplazará si la descarga es válida.")
+    target_provider = destination_root / PROVIDER_ROOT
+    if target_provider.exists() and not args.force:
+        raise IterError(
+            "La estructura local del proveedor existe, pero falta el CSV canónico. "
+            "Revísela o use --force para reemplazarla de forma segura."
+        )
 
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    if using_default_destination and LEGACY_DEST.is_file():
+        print(
+            "Aviso: se detectó datos.csv como compatibilidad heredada. No se copiará "
+            "ni modificará; la nueva descarga se instalará en la ruta canónica."
+        )
+    if target_provider.exists():
+        print(
+            "--force activo: el árbol actual sólo se reemplazará si la descarga "
+            "completa pasa la validación."
+        )
+
+    destination_root.parent.mkdir(parents=True, exist_ok=True)
     downloaded_at = datetime.now().astimezone().isoformat(timespec="seconds")
     print(f"Fecha/hora de descarga: {downloaded_at}")
     print(f"Descargando desde: {OFFICIAL_URL}")
 
     with tempfile.TemporaryDirectory(
-        prefix=".iter2020-", dir=str(destination.parent)
+        prefix=".iter2020-", dir=str(destination_root.parent)
     ) as temporary_directory:
         temporary = Path(temporary_directory)
         downloaded = temporary / "descarga.tmp"
-        candidate = temporary / EXPECTED_CSV_BASENAME
+        extracted_root = temporary / "extraido"
 
         content_type, downloaded_size = download_to_temp(OFFICIAL_URL, downloaded)
         print(f"HTTP correcto; Content-Type: {content_type}")
@@ -401,17 +509,17 @@ def run(args: argparse.Namespace) -> None:
 
         file_type = classify_download(downloaded, content_type)
         if file_type == "zip":
-            print("ZIP detectado; comprobando integridad y CSV nacional.")
-            extract_expected_csv(downloaded, candidate)
+            print("ZIP detectado; validando y extrayendo su estructura original.")
+            candidate = extract_official_tree(downloaded, extracted_root)
         else:
-            print("CSV directo detectado.")
-            shutil.copyfile(downloaded, candidate)
+            print("CSV directo detectado; se instalará en la estructura canónica.")
+            candidate = create_direct_csv_tree(downloaded, extracted_root)
 
         report = validate_csv(candidate)
-        os.replace(candidate, destination)
+        install_provider_tree(extracted_root, destination_root, args.force)
 
     final_report = ValidationReport(
-        path=destination,
+        path=canonical,
         size=report.size,
         sha256=report.sha256,
         encoding=report.encoding,
@@ -421,7 +529,7 @@ def run(args: argparse.Namespace) -> None:
         municipal_records=report.municipal_records,
         entities=report.entities,
     )
-    print("El archivo se instaló mediante escritura atómica.")
+    print("La estructura oficial se instaló mediante escritura atómica.")
     print_report(final_report)
 
 

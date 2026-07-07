@@ -13,9 +13,9 @@ El análisis utiliza el archivo nacional de **“Principales resultados por loca
 - Cobertura: archivo nacional ITER 2020.
 - Catálogo oficial: [ficha de descarga de INEGI](https://www.inegi.org.mx/app/descarga/ficha.html?tit=326108&ag=0&f=csv).
 - Distribución configurada: dominio oficial `inegi.org.mx`.
-- Archivo local esperado: `datos.csv` en la raíz del repositorio.
+- Archivo local principal: `iter_00_cpv2020_csv/iter_00_cpv2020/conjunto_de_datos/conjunto_de_datos_iter_00CSV20.csv`.
 
-El CSV no se versiona por su tamaño. Se obtiene mediante `scripts/descargar_iter2020.py`, el script de adquisición del proyecto; no debe reemplazarse por una copia de terceros.
+La estructura extraída no se versiona por su tamaño. Se obtiene mediante `scripts/descargar_iter2020.py`, el script de adquisición del proyecto, y conserva los directorios originales del ZIP; no debe reemplazarse por una copia de terceros. Un `datos.csv` en la raíz sólo se reconoce como compatibilidad heredada y no se crea automáticamente.
 
 ## Flujo de adquisición y análisis
 
@@ -24,9 +24,9 @@ Fuente oficial de INEGI
         ↓
 descarga temporal y validación
         ↓
-extracción segura del CSV nacional
+extracción segura de la estructura original
         ↓
-datos.csv local en la raíz
+CSV canónico dentro de iter_00_cpv2020_csv/
         ↓
 notebook ejecutado secuencialmente
         ↓
@@ -39,13 +39,13 @@ El comando normal es:
 python scripts/descargar_iter2020.py
 ```
 
-El script descarga, valida y extrae antes de guardar el destino. Para auditar una copia existente sin usar la red:
+El script descarga, valida y extrae antes de instalar atómicamente el árbol del proveedor. Para auditar la fuente canónica existente sin usar la red:
 
 ```bash
 python scripts/descargar_iter2020.py --validate-only
 ```
 
-`--dest RUTA` permite aislar una descarga en otra ubicación. `--force` solicita reemplazar un destino existente, pero el reemplazo sólo ocurre si la nueva descarga pasa las validaciones. `--force` y `--validate-only` son mutuamente excluyentes.
+`--dest DIRECTORIO` define otra raíz de extracción, dentro de la cual se conserva `iter_00_cpv2020/...`. `--force` solicita reemplazar el árbol extraído, pero el reemplazo sólo ocurre si la nueva descarga pasa las validaciones. `--force` y `--validate-only` son mutuamente excluyentes.
 
 ## Validaciones realizadas por el script
 
@@ -57,28 +57,30 @@ El script comprueba:
 4. que una respuesta HTML de error no se acepte como ZIP o CSV;
 5. que el ZIP sea legible y no contenga entradas dañadas;
 6. que las rutas internas del ZIP sean seguras para la extracción;
-7. que exista exactamente un CSV con el nombre nacional esperado;
+7. que todas las entradas pertenezcan al árbol oficial `iter_00_cpv2020/` y que exista exactamente la ruta nacional esperada;
 8. que el CSV sea UTF-8 válido, con o sin BOM, y use coma como separador;
 9. que no haya encabezados vacíos o duplicados y estén presentes las columnas geográficas;
 10. que estén presentes las variables y denominadores utilizados por el modelo;
 11. que los tres registros nacionales iniciales tengan la estructura esperada;
 12. que exista cobertura de las 32 entidades y registros `Total del Municipio`;
-13. que un destino válido no se sobrescriba sin `--force`;
-14. que un destino inválido existente produzca un error útil;
-15. que la instalación final use escritura atómica, después de validar el candidato.
+13. que una fuente canónica válida no se descargue ni sobrescriba sin `--force`;
+14. que un árbol incompleto o inválido produzca un error útil;
+15. que la instalación final del árbol del proveedor use escritura atómica, después de validar el candidato.
 
 El reporte local incluye tamaño, SHA-256 calculado, codificación, separador, número de columnas, registros, entidades y totales municipales. El proyecto no publica en esta documentación un hash fijo de una versión de datos.
 
 ## Convención local de los datos
 
-- `datos.csv` reside en la raíz y está ignorado por Git.
+- La fuente principal reside bajo `iter_00_cpv2020_csv/`, carpeta ignorada por Git.
+- El CSV canónico es `iter_00_cpv2020/conjunto_de_datos/conjunto_de_datos_iter_00CSV20.csv` dentro de esa raíz.
+- `datos.csv` es únicamente una alternativa heredada, también ignorada; no es necesaria ni se genera automáticamente.
 - La codificación confirmada es UTF-8, con aceptación de BOM; el separador confirmado es la coma.
 - La primera fila es el encabezado.
 - El notebook conserva ese encabezado y omite los tres registros agregados iniciales con `skiprows=range(1, 4)`.
 - Esos tres registros son `Total nacional`, `Localidades de una vivienda` y `Localidades de dos viviendas`; no son cabeceras adicionales.
 - Después, el notebook normaliza `NOM_LOC` y conserva los registros `TOTAL DEL MUNICIPIO` para construir la base municipal.
 
-No es necesario leer, editar, renombrar ni versionar manualmente el CSV para aplicar este protocolo.
+No es necesario copiar, editar, renombrar ni versionar manualmente el CSV para aplicar este protocolo.
 
 ## Entorno computacional
 
@@ -107,13 +109,13 @@ Las dependencias se declaran mediante cotas mínimas, no mediante un entorno com
    python -m pip install -r requirements.txt
    ```
 
-4. Descargue el archivo nacional:
+4. Descargue y extraiga la estructura oficial:
 
    ```bash
    python scripts/descargar_iter2020.py
    ```
 
-5. Valide explícitamente la copia instalada:
+5. Valide explícitamente la fuente canónica instalada:
 
    ```bash
    python scripts/descargar_iter2020.py --validate-only
@@ -135,15 +137,15 @@ Las dependencias se declaran mediante cotas mínimas, no mediante un entorno com
 3. Revise `skiprows=range(1, 4)`, el filtro de `NOM_LOC` y los filtros posteriores.
 4. Trace cada variable derivada hasta su variable censal y denominador.
 5. Confirme que la fuente enlazada corresponde al ITER nacional 2020 de INEGI.
-6. Verifique que los datos no estén bajo control de versiones:
+6. Verifique que la estructura local y la compatibilidad heredada no estén bajo control de versiones:
 
    ```bash
-   git check-ignore -v datos.csv
-   git ls-files datos.csv
+   git check-ignore -v iter_00_cpv2020_csv/ datos.csv
+   git ls-files iter_00_cpv2020_csv datos.csv
    git status
    ```
 
-   El primer comando debe mostrar la regla aplicable de `.gitignore`; el segundo no debe listar el archivo; y `git status` no debe presentarlo para confirmación.
+   El primer comando debe mostrar las reglas aplicables de `.gitignore`; el segundo no debe listar datos; y `git status` no debe presentarlos para confirmación.
 
 7. Revise el historial o el *diff* de una propuesta para separar cambios documentales, técnicos y metodológicos.
 8. Use las pruebas de [GUIA_DE_PRUEBAS.md](GUIA_DE_PRUEBAS.md) antes de aceptar cambios.

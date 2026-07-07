@@ -37,6 +37,10 @@ Las propuestas que cambien variables, filtros, transformaciones, supuestos o pro
 │   ├── ARQUITECTURA_DEL_REPOSITORIO.md
 │   ├── GUIA_DE_PRUEBAS.md
 │   └── REPRODUCIBILIDAD.md
+├── iter_00_cpv2020_csv/             # estructura oficial local; ignorada por Git
+│   └── iter_00_cpv2020/
+│       └── conjunto_de_datos/
+│           └── conjunto_de_datos_iter_00CSV20.csv
 ├── outputs/                         # salidas locales ignoradas por Git
 ├── scripts/
 │   └── descargar_iter2020.py
@@ -48,7 +52,7 @@ Las propuestas que cambien variables, filtros, transformaciones, supuestos o pro
 ├── README.md
 ├── regresion_multivariada_censo2020.ipynb
 ├── requirements.txt
-└── datos.csv                        # archivo local ignorado; no se distribuye
+└── datos.csv                        # compatibilidad heredada opcional; ignorado
 ```
 
 La separación funcional se explica en [docs/ARQUITECTURA_DEL_REPOSITORIO.md](docs/ARQUITECTURA_DEL_REPOSITORIO.md).
@@ -59,7 +63,7 @@ La separación funcional se explica en [docs/ARQUITECTURA_DEL_REPOSITORIO.md](do
 - Dependencias de `requirements.txt`: NumPy, pandas, SciPy, Matplotlib, IPython, Jupyter y Notebook.
 - Windows, macOS o Linux con Python y Jupyter disponibles.
 - Acceso a internet para la descarga inicial desde INEGI. La validación local con `--validate-only` no utiliza la red.
-- Espacio suficiente para el ZIP temporal y el CSV nacional.
+- Espacio suficiente para el ZIP temporal y la estructura nacional extraída.
 
 Se recomienda un entorno virtual para aislar las dependencias. Las versiones mínimas están declaradas, pero cambios de versión pueden producir diferencias numéricas o visuales.
 
@@ -111,25 +115,35 @@ Desde la raíz del repositorio ejecute:
 python scripts/descargar_iter2020.py
 ```
 
-El script descarga la fuente configurada en el dominio oficial de INEGI, comprueba la respuesta y el contenido, extrae únicamente el CSV nacional esperado, valida su estructura y lo instala como `datos.csv` mediante escritura atómica. Si el destino ya existe y es válido, no vuelve a descargarlo.
+El script descarga el ZIP desde el dominio oficial de INEGI, comprueba la respuesta y el contenido, valida la extracción y conserva la estructura original del proveedor. La ubicación principal queda en:
 
-Para validar el `datos.csv` existente sin usar la red:
+```text
+iter_00_cpv2020_csv/
+└── iter_00_cpv2020/
+    └── conjunto_de_datos/
+        └── conjunto_de_datos_iter_00CSV20.csv
+```
+
+El árbol `iter_00_cpv2020/` se instala mediante una operación atómica después de validar el CSV. Si la fuente canónica ya existe y es válida, el script no descarga, copia ni crea otro CSV. Así se evita mantener una segunda copia nacional en la raíz.
+
+Para validar la fuente canónica existente sin usar la red:
 
 ```bash
 python scripts/descargar_iter2020.py --validate-only
 ```
 
-Las opciones adicionales confirmadas son `--dest RUTA`, para usar otro destino, y `--force`, para solicitar el reemplazo seguro de un destino existente. `--force` sólo reemplaza el archivo después de validar la nueva descarga y no puede combinarse con `--validate-only`.
+`--dest DIRECTORIO` permite elegir otra raíz de extracción; dentro de ella se conserva la misma estructura `iter_00_cpv2020/...`. `--force` solicita el reemplazo seguro del árbol extraído y sólo lo instala después de validar la nueva descarga. `--force` no puede combinarse con `--validate-only`.
 
-### Sobre `datos.csv`
+### Sobre la carpeta local de datos
 
-- No se incluye en GitHub por su tamaño.
-- Se obtiene localmente desde la distribución oficial de INEGI.
-- El script lo valida antes de instalarlo o utilizarlo como copia aceptada.
-- Está ignorado por Git y no debe subirse al repositorio.
+- `iter_00_cpv2020_csv/` no se incluye en GitHub por su tamaño.
+- Se obtiene localmente desde el ZIP oficial de INEGI y conserva la estructura del proveedor.
+- El script valida el CSV nacional antes de instalar el árbol extraído.
+- La carpeta está ignorada por Git y no debe subirse al repositorio.
+- Puede regenerarse con `python scripts/descargar_iter2020.py`.
 - No debe sustituirse por copias de terceros, porque se perdería la trazabilidad de la fuente.
 
-No renombre ni elimine una copia válida para probar el proyecto; use `--dest` cuando necesite una descarga aislada.
+`datos.csv` se admite únicamente como compatibilidad heredada cuando la ruta canónica no existe. No es obligatorio, no se crea ni se copia automáticamente y continúa ignorado por Git. Use `--dest` con un directorio temporal cuando necesite una descarga aislada.
 
 ## Fuente oficial
 
@@ -140,7 +154,7 @@ El conjunto utilizado es **“Principales resultados por localidad (ITER) del Ce
 
 ## Ejecución del notebook
 
-Antes de abrir el notebook, debe existir un `datos.csv` válido en la raíz. El notebook no descarga los datos automáticamente; si el archivo falta, indica que debe ejecutarse el script de descarga.
+Antes de abrir el notebook, debe existir el CSV canónico extraído. El notebook lo busca primero en la estructura oficial y sólo después considera `datos.csv` como compatibilidad heredada. No descarga datos automáticamente; si no encuentra ninguna fuente, indica que debe ejecutarse el script.
 
 ```bash
 jupyter notebook regresion_multivariada_censo2020.ipynb
@@ -171,7 +185,7 @@ También puede usarse JupyterLab o un editor compatible con `.ipynb`. Ejecute to
 | 17 | Interpretación de las cuatro direcciones canónicas. |
 | 18 | Visualizaciones de apoyo. |
 
-La carga conserva el encabezado de la primera fila y omite los tres registros agregados iniciales mediante:
+Una vez resuelta la ruta de entrada, la carga conserva el encabezado de la primera fila y omite los tres registros agregados iniciales mediante:
 
 ```python
 pd.read_csv(DATA_PATH, skiprows=range(1, 4), encoding="utf-8")
@@ -187,7 +201,7 @@ El análisis de referencia se apoya en:
 - las dependencias declaradas en `requirements.txt`;
 - la semilla global confirmada `SEED = 2026`;
 - el nivel de significancia `ALPHA = 0.05`;
-- la validación previa de `datos.csv`;
+- la validación previa del CSV canónico extraído;
 - la ejecución secuencial del notebook;
 - la comparación con los resultados de referencia del análisis original.
 

@@ -41,6 +41,7 @@ ENV/
 Thumbs.db
 
 # --- Datos pesados (descargar de INEGI) ---
+iter_00_cpv2020_csv/
 datos.csv
 iter_00_cpv2020*.zip
 *iter_00*cpv2020*.zip

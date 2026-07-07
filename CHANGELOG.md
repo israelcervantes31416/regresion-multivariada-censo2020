@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-- Espacio para cambios futuros.
+- La estructura original extraída del ZIP de INEGI pasa a ser la fuente local canónica.
+- `datos.csv` se conserva únicamente como compatibilidad heredada opcional.
 
 ## Estado inicial documentado
 
