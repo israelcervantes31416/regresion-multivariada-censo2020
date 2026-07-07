@@ -1,124 +1,229 @@
-# Regresión Lineal Multivariada Aplicada al Censo de Población y Vivienda 2020
+# Regresión lineal multivariada aplicada al Censo de Población y Vivienda 2020
 
-Implementación matricial desde cero (sin librerías multivariadas dedicadas) de un modelo de regresión lineal multivariada para el análisis conjunto de indicadores de vulnerabilidad social a nivel municipal en México, con datos del Censo de Población y Vivienda 2020 del INEGI.
+Implementación matricial, sin librerías multivariadas dedicadas, de un modelo de regresión lineal multivariada para analizar conjuntamente indicadores de vulnerabilidad social a nivel municipal en México con información del Censo de Población y Vivienda 2020 del Instituto Nacional de Estadística y Geografía (INEGI).
 
-## Autor
+## Contexto académico
 
-**Israel Cervantes Juárez**  
-Licenciatura en Matemáticas Aplicadas  
-Facultad de Ciencias Físico Matemáticas  
-Benemérita Universidad Autónoma de Puebla (BUAP)
+El repositorio acompaña la tesis de Licenciatura en Matemáticas Aplicadas titulada *La regresión multivariada como marco estadístico para el análisis conjunto de indicadores socioeconómicos: una aplicación al Censo de Población y Vivienda 2020*.
 
-Asesor: Dr. Bulmaro Juárez Hernández
+**Autor:** Israel Cervantes Juárez<br>
+**Programa:** Licenciatura en Matemáticas Aplicadas<br>
+**Institución:** Facultad de Ciencias Físico Matemáticas, Benemérita Universidad Autónoma de Puebla (BUAP)<br>
+**Asesor:** Dr. Bulmaro Juárez Hernández
 
-## Resumen del proyecto
+## Objetivo del análisis
 
-Sobre una base de $n = 2{,}469$ municipios se estima el modelo
+El análisis estima conjuntamente cuatro variables respuesta de rezago social a partir de diez covariables sociodemográficas. Sobre una base de $n = 2{,}469$ municipios, $Y \in \mathbb{R}^{n \times 4}$ contiene las respuestas y $X \in \mathbb{R}^{n \times 11}$ contiene el intercepto y las covariables.
+
+El modelo general es:
 
 $$Y = XB + U$$
 
-donde $Y \in \mathbb{R}^{n \times 4}$ recoge cuatro variables respuesta de rezago social (limitación cognitiva, analfabetismo, desocupación, carencia de bienes en la vivienda) y $X \in \mathbb{R}^{n \times 11}$ agrupa el intercepto y diez covariables sociodemográficas. La implementación cubre:
+La implementación comprende estimación por mínimos cuadrados ordinarios multivariados; verificación de la descomposición $T = H + E$; contrastes globales de Wilks, Pillai y Hotelling–Lawley; descripción espectral de Roy; pruebas parciales tipo III; diagnósticos residuales y de influencia; análisis de sensibilidad; y análisis canónico.
 
-- Estimación por MCO multivariado con verificación numérica de la descomposición $T = H + E$
-- Pruebas globales con aproximaciones $F$ para Wilks, Pillai y Hotelling–Lawley; Roy se conserva como descriptor con cota superior de referencia cuando $s>1$
-- Pruebas parciales tipo III por covariable
-- Diagnóstico residual: normalidad multivariada de Mardia, heterocedasticidad tipo White multivariada, observaciones influyentes (leverage, distancia de Cook)
-- Análisis de sensibilidad por exclusión de municipios influyentes
-- Análisis canónico: cuatro direcciones interpretadas substantivamente
+## Alcance del repositorio
 
-Resultados principales:
+El repositorio contiene el notebook del análisis, las dependencias, un script reproducible para adquirir y validar la fuente oficial y documentación para instalar, ejecutar, probar y auditar el proyecto. No distribuye el archivo censal ni pretende actualizarlo: el periodo de referencia es el Censo 2020.
 
-- $R^2_{\mathrm{tr}} \approx 0.77$, rechazo categórico de la nula global con todos los estadísticos
-- Primera dirección canónica absorbe el 93.8% de la asociación, dominada por analfabetismo adulto ($\rho_1 \approx 0.98$)
-- Jerarquía de predictores encabezada por proporción de población sin escolaridad y proporción de viviendas con piso de tierra
+Las propuestas que cambien variables, filtros, transformaciones, supuestos o procedimientos estadísticos deben tratarse como extensiones metodológicas y no como sustituciones silenciosas del análisis original. Consulte [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Estructura del repositorio
 
-```
+```text
 .
-├── README.md
-├── requirements.txt
+├── .github/
+│   └── pull_request_template.md
+├── docs/
+│   ├── ARQUITECTURA_DEL_REPOSITORIO.md
+│   ├── GUIA_DE_PRUEBAS.md
+│   └── REPRODUCIBILIDAD.md
+├── outputs/                         # salidas locales ignoradas por Git
+├── scripts/
+│   └── descargar_iter2020.py
 ├── .gitignore
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── IsraelCervantesJuarez.pdf
 ├── LICENSE
+├── README.md
 ├── regresion_multivariada_censo2020.ipynb
-└── datos.csv  (NO INCLUIDO — ver sección "Obtención de datos")
+├── requirements.txt
+└── datos.csv                        # archivo local ignorado; no se distribuye
 ```
+
+La separación funcional se explica en [docs/ARQUITECTURA_DEL_REPOSITORIO.md](docs/ARQUITECTURA_DEL_REPOSITORIO.md).
 
 ## Requisitos
 
-- Python 3.9 o superior
-- Las dependencias listadas en `requirements.txt`
+- Python 3.9 o superior. La implementación usa características del lenguaje disponibles desde Python 3.9 y las versiones mínimas declaradas en `requirements.txt`.
+- Dependencias de `requirements.txt`: NumPy, pandas, SciPy, Matplotlib, IPython, Jupyter y Notebook.
+- Windows, macOS o Linux con Python y Jupyter disponibles.
+- Acceso a internet para la descarga inicial desde INEGI. La validación local con `--validate-only` no utiliza la red.
+- Espacio suficiente para el ZIP temporal y el CSV nacional.
 
-## Instalación
+Se recomienda un entorno virtual para aislar las dependencias. Las versiones mínimas están declaradas, pero cambios de versión pueden producir diferencias numéricas o visuales.
+
+## Instalación desde cero
+
+Clone el repositorio y entre en él:
 
 ```bash
-# Clonar el repositorio
-git clone https://github.com/<TU_USUARIO>/<NOMBRE_REPO>.git
-cd <NOMBRE_REPO>
-
-# Crear entorno virtual (opcional pero recomendado)
-python -m venv venv
-source venv/bin/activate          # macOS / Linux
-venv\Scripts\activate             # Windows
-
-# Instalar dependencias
-pip install -r requirements.txt
+git clone https://github.com/israelcervantes31416/regresion-multivariada-censo2020.git
+cd regresion-multivariada-censo2020
 ```
 
-## Obtención de datos
+### Windows (PowerShell)
 
-El archivo `datos.csv` corresponde al **ITER 2020** del Censo de Población y Vivienda (INEGI). Por su tamaño (~143 MB) no se incluye en el repositorio.
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-Pasos para obtenerlo:
+Si el comando `py` no está disponible, use `python -m venv .venv`.
 
-1. Ingresar a la página oficial del Censo 2020 de INEGI:  
-   <https://www.inegi.org.mx/programas/ccpv/2020/>
-2. Descargar el archivo **ITER Nacional CSV** desde la sección "Datos abiertos".
-3. Renombrar el archivo descargado como `datos.csv` y colocarlo en la raíz del repositorio.
+### macOS
 
-Las primeras tres filas del archivo (cabeceras descriptivas adicionales) se omiten al cargarlo: ver Celda 3 del notebook.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
-## Ejecución
+### Linux
 
-Una vez instaladas las dependencias y colocado `datos.csv` en la raíz, abrir el notebook:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+En algunas distribuciones de Linux puede ser necesario instalar previamente el paquete del sistema que proporciona `venv`.
+
+## Descarga de datos
+
+Desde la raíz del repositorio ejecute:
+
+```bash
+python scripts/descargar_iter2020.py
+```
+
+El script descarga la fuente configurada en el dominio oficial de INEGI, comprueba la respuesta y el contenido, extrae únicamente el CSV nacional esperado, valida su estructura y lo instala como `datos.csv` mediante escritura atómica. Si el destino ya existe y es válido, no vuelve a descargarlo.
+
+Para validar el `datos.csv` existente sin usar la red:
+
+```bash
+python scripts/descargar_iter2020.py --validate-only
+```
+
+Las opciones adicionales confirmadas son `--dest RUTA`, para usar otro destino, y `--force`, para solicitar el reemplazo seguro de un destino existente. `--force` sólo reemplaza el archivo después de validar la nueva descarga y no puede combinarse con `--validate-only`.
+
+### Sobre `datos.csv`
+
+- No se incluye en GitHub por su tamaño.
+- Se obtiene localmente desde la distribución oficial de INEGI.
+- El script lo valida antes de instalarlo o utilizarlo como copia aceptada.
+- Está ignorado por Git y no debe subirse al repositorio.
+- No debe sustituirse por copias de terceros, porque se perdería la trazabilidad de la fuente.
+
+No renombre ni elimine una copia válida para probar el proyecto; use `--dest` cuando necesite una descarga aislada.
+
+## Fuente oficial
+
+El conjunto utilizado es **“Principales resultados por localidad (ITER) del Censo de Población y Vivienda 2020. Datos oportunos”**, archivo nacional ITER 2020, publicado por el INEGI.
+
+- [Ficha del catálogo de descarga de INEGI](https://www.inegi.org.mx/app/descarga/ficha.html?tit=326108&ag=0&f=csv)
+- [Términos de libre uso de la información del INEGI](https://www.inegi.org.mx/inegi/terminos.html)
+
+## Ejecución del notebook
+
+Antes de abrir el notebook, debe existir un `datos.csv` válido en la raíz. El notebook no descarga los datos automáticamente; si el archivo falta, indica que debe ejecutarse el script de descarga.
 
 ```bash
 jupyter notebook regresion_multivariada_censo2020.ipynb
 ```
 
-o bien con Jupyter Lab, VS Code o cualquier ejecutor de `.ipynb`. El notebook se compone de 18 celdas numeradas (`CELDA 1` a `CELDA 18`), ejecutables en orden secuencial:
+También puede usarse JupyterLab o un editor compatible con `.ipynb`. Ejecute todas las celdas secuencialmente, desde la primera hasta la última, porque las celdas posteriores dependen del estado construido por las anteriores.
+
+### Recorrido del análisis
 
 | Celda | Contenido |
 |---|---|
-| 1 | Imports y configuración global (semilla, $\alpha = 0.05$, rutas) |
-| 2 | Funciones auxiliares (MCO, SSCP, Mardia, White, vech, etc.) |
-| 3 | Carga del archivo ITER y filtro a totales municipales |
-| 4 | Especificación formal de variables del modelo |
-| 5 | Construcción de tasas y proporciones |
-| 6 | Transformación por raíz cuadrada |
-| 7 | Construcción de matrices $X$ y $Y$ |
-| 8 | Estimación MCO multivariada |
-| 9 | Descomposición SSCP e inferencia global (con $H_0 : CB = 0$) |
-| 10 | Pruebas parciales por predictor (con $H_{0j}$ por covariable) |
-| 11 | Normalidad multivariada de residuos (Mardia) |
-| 12 | Diagnóstico auxiliar de heterocedasticidad (White multivariado) |
-| 13 | Diagnóstico estructural de residuos |
-| 14 | Influencia multivariada (leverage, distancia de Cook) |
-| 15 | Análisis de sensibilidad por exclusión de influyentes |
-| 16 | Vistas alternativas del subespacio canónico |
-| 17 | Interpretación de las cuatro direcciones canónicas |
-| 18 | Visualizaciones de apoyo |
+| 1 | Imports, rutas, semilla y configuración global. |
+| 2 | Funciones auxiliares para estimación, SSCP y diagnósticos. |
+| 3 | Carga del ITER y filtro a totales municipales. |
+| 4 | Especificación formal de variables del modelo. |
+| 5 | Construcción de tasas y proporciones. |
+| 6 | Transformación por raíz cuadrada. |
+| 7 | Construcción de las matrices $X$ y $Y$. |
+| 8 | Estimación MCO multivariada. |
+| 9 | Descomposición SSCP e inferencia global. |
+| 10 | Pruebas parciales tipo III por predictor. |
+| 11 | Normalidad multivariada de residuos mediante Mardia. |
+| 12 | Diagnóstico auxiliar tipo White multivariado. |
+| 13 | Diagnóstico estructural de residuos. |
+| 14 | Influencia multivariada. |
+| 15 | Análisis de sensibilidad por exclusión de influyentes. |
+| 16 | Vistas del subespacio canónico. |
+| 17 | Interpretación de las cuatro direcciones canónicas. |
+| 18 | Visualizaciones de apoyo. |
+
+La carga conserva el encabezado de la primera fila y omite los tres registros agregados iniciales mediante:
+
+```python
+pd.read_csv(DATA_PATH, skiprows=range(1, 4), encoding="utf-8")
+```
+
+Esos registros son `Total nacional`, `Localidades de una vivienda` y `Localidades de dos viviendas`; no son cabeceras adicionales. Después de la carga, el notebook selecciona los registros cuyo `NOM_LOC` es `TOTAL DEL MUNICIPIO`.
 
 ## Reproducibilidad
 
-- Semilla global: `SEED = 2026`
-- Nivel de significancia: `ALPHA = 0.05`
-- Toda la estimación se realiza por álgebra lineal explícita; ninguna rutina se delega a librerías multivariadas externas.
-- Las funciones de `scipy.stats` (`f`, `chi2`, `norm`) se usan únicamente para evaluar cuantiles y funciones de distribución acumulada.
+El análisis de referencia se apoya en:
+
+- la fuente nacional oficial ITER 2020;
+- las dependencias declaradas en `requirements.txt`;
+- la semilla global confirmada `SEED = 2026`;
+- el nivel de significancia `ALPHA = 0.05`;
+- la validación previa de `datos.csv`;
+- la ejecución secuencial del notebook;
+- la comparación con los resultados de referencia del análisis original.
+
+La estimación se implementa mediante álgebra lineal explícita. Las funciones `f`, `chi2` y `norm` de `scipy.stats` se usan para evaluar distribuciones y cuantiles, no para delegar el ajuste a una biblioteca multivariada dedicada.
+
+Esto favorece la reproducción, pero no garantiza identidad absoluta entre entornos. Cambios en filtros, variables, transformaciones, versiones de dependencias o decisiones metodológicas pueden modificar los resultados. El protocolo completo y los puntos de auditoría están en [docs/REPRODUCIBILIDAD.md](docs/REPRODUCIBILIDAD.md).
+
+## Resultados principales
+
+Los siguientes son **resultados de referencia del análisis original** y no resultados recalculados por esta documentación:
+
+- $R^2_{\mathrm{tr}} \approx 0.77$ y rechazo de la hipótesis nula global con Wilks, Pillai y Hotelling–Lawley.
+- La primera dirección canónica absorbe el 93.8 % de la asociación y está dominada por analfabetismo adulto ($\rho_1 \approx 0.98$).
+- La jerarquía de predictores está encabezada por la proporción de población sin escolaridad y la proporción de viviendas con piso de tierra.
+
+## Límites de interpretación
+
+- La fuente corresponde al Censo de Población y Vivienda 2020.
+- El análisis es observacional; una asociación estadística no implica causalidad.
+- Los resultados no deben trasladarse automáticamente a periodos, poblaciones o escalas territoriales diferentes.
+- No deben emplearse para describir sin actualización y validación independiente la situación actual del país.
+- Los diagnósticos y resultados dependen de las variables, filtros, transformaciones y versiones utilizadas en el análisis original.
+
+## Contribución, auditoría y pruebas
+
+- Para proponer cambios: [CONTRIBUTING.md](CONTRIBUTING.md).
+- Para reproducir y auditar la trazabilidad: [docs/REPRODUCIBILIDAD.md](docs/REPRODUCIBILIDAD.md).
+- Para ejecutar verificaciones antes de contribuir: [docs/GUIA_DE_PRUEBAS.md](docs/GUIA_DE_PRUEBAS.md).
+
+## Licencia y datos
+
+El código se distribuye bajo la licencia MIT; consulte [LICENSE](LICENSE). La licencia del código no se extiende a los datos. La información censal es publicada por el INEGI y está sujeta a sus propios términos de uso. El autor del repositorio no se atribuye la propiedad de esos datos.
 
 ## Citación
 
-Si utilizas este código en un trabajo derivado, por favor cita:
+Si utiliza este código en un trabajo derivado, cite:
 
 ```bibtex
 @mastersthesis{cervantes2026regresionmultivariada,
@@ -132,9 +237,3 @@ Si utilizas este código en un trabajo derivado, por favor cita:
   type         = {Tesis de Licenciatura en Matemáticas Aplicadas}
 }
 ```
-
-## Licencia
-
-Este código se distribuye bajo la licencia MIT. Ver el archivo [LICENSE](LICENSE) para los términos completos.
-
-Los datos del Censo de Población y Vivienda 2020 son propiedad del INEGI y se rigen por sus propios términos de uso (datos abiertos): <https://www.inegi.org.mx/inegi/terminos.aspx>.

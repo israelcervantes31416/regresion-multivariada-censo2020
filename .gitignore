@@ -42,6 +42,18 @@ Thumbs.db
 
 # --- Datos pesados (descargar de INEGI) ---
 datos.csv
+iter_00_cpv2020*.zip
+*iter_00*cpv2020*.zip
+*iter*2020*.zip
+*ITER*2020*.zip
+.iter2020-*/
+.descargas/
+.download-cache/
+*.download
+*.part
+datos.csv.bak
+datos.csv.backup
+datos.csv~
 
 # --- Backups del notebook ---
 *.ipynb.bak
